@@ -75,8 +75,8 @@ with st.sidebar:
 
     st.markdown("### 📅 Rango de años")
     col1, col2 = st.columns(2)
-    yr_from = col1.number_input("Desde", value=1800, step=10)
-    yr_to   = col2.number_input("Hasta", value=1880, step=10)
+    yr_from = col1.number_input("Desde", value=1780, step=10)
+    yr_to   = col2.number_input("Hasta", value=1950, step=10)
 
     st.markdown("### 👤 Personajes")
     col_a, col_b = st.columns(2)
