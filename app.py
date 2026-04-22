@@ -61,7 +61,7 @@ if "personas" not in st.session_state:
 if "sucesos" not in st.session_state:
     st.session_state.sucesos  = [s.copy() for s in SUCESOS_INIT]
 if "titulo" not in st.session_state:
-    st.session_state.titulo = "Pintores de Murcia – s. XVII"
+    st.session_state.titulo = "Gráfica temporal biográfica"
 
 personas = st.session_state.personas
 sucesos  = st.session_state.sucesos
