@@ -21,27 +21,27 @@ st.set_page_config(
 #   DATOS INICIALES
 # ════════════════════════════════════════════════════════════
 PERSONAS_INIT = [
-    dict(nombre="Orrente",           nac=1580, muer=1645, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Villacís",          nac=1516, muer=1694, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Juan de Toledo",    nac=1611, muer=1665, nac_aprox=True,  muer_aprox=False, genero="H"),
-    dict(nombre="Francisco Gilarte", nac=1626, muer=1667, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Mateo Gilarte",     nac=1629, muer=1675, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Senen Vila",        nac=1640, muer=1707, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Lorenzo Vila",      nac=1683, muer=1713, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="García-Hidalgo",    nac=1646, muer=1719, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Nicolás de Bussy",  nac=1640, muer=1706, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Antonio Palomino",  nac=1655, muer=1725, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Polo de Medina",    nac=1603, muer=1676, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Gregorio Saavedra", nac=1630, muer=1685, nac_aprox=True,  muer_aprox=False, genero="H"),
-    dict(nombre="Luisa Villacís",    nac=1649, muer=1710, nac_aprox=False, muer_aprox=True,  genero="M"),
-    dict(nombre="Magdalena Gilarte", nac=1649, muer=1710, nac_aprox=False, muer_aprox=True,  genero="M"),
-    dict(nombre="Antonia Vila",      nac=1675, muer=1740, nac_aprox=True,  muer_aprox=True,  genero="M"),
+    dict(nombre="Pedro",           nac=1780, muer=1845, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Luis",          nac=1716, muer=1894, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Juan",    nac=1811, muer=1865, nac_aprox=True,  muer_aprox=False, genero="H"),
+    dict(nombre="Francisco", nac=1826, muer=1867, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Mateo",     nac=1829, muer=1875, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Victor",        nac=1840, muer=1907, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Lorenzo",      nac=1883, muer=1913, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="García",    nac=1846, muer=1919, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Nicol",  nac=1840, muer=1906, nac_aprox=False, muer_aprox=False, genero="M"),
+    dict(nombre="Anton",  nac=1855, muer=1925, nac_aprox=False, muer_aprox=False, genero="M"),
+    dict(nombre="Paula",    nac=1803, muer=1876, nac_aprox=False, muer_aprox=False, genero="M"),
+    dict(nombre="Gregoria", nac=1830, muer=1885, nac_aprox=True,  muer_aprox=False, genero="M"),
+    dict(nombre="Luisa",    nac=1849, muer=1910, nac_aprox=False, muer_aprox=True,  genero="M"),
+    dict(nombre="Magdalena", nac=1849, muer=1910, nac_aprox=False, muer_aprox=True,  genero="M"),
+    dict(nombre="Antonia",      nac=1875, muer=1940, nac_aprox=True,  muer_aprox=True,  genero="M"),
 ]
 
 SUCESOS_INIT = [
-    dict(nombre="La Batalla",             año=1660, personajes=["Francisco Gilarte","Juan de Toledo","Mateo Gilarte","Senen Vila"]),
-    dict(nombre="Llega a Murcia",         año=1679, personajes=["Senen Vila","Lorenzo Vila","García-Hidalgo"]),
-    dict(nombre="Episodio Miguel Clares", año=1673, personajes=["Luisa Villacís"]),
+    dict(nombre="La Batalla",             año=1860, personajes=["Francisco","Juan","Mateo","Victor"]),
+    dict(nombre="Llega al pueblo",         año=1879, personajes=["Victo","Lorenzo","García"]),
+    dict(nombre="Episodio Miguel", año=1873, personajes=["Luisa"]),
 ]
 
 # ════════════════════════════════════════════════════════════
@@ -84,8 +84,8 @@ with st.sidebar:
 
     st.markdown("### 📅 Rango de años")
     col1, col2 = st.columns(2)
-    yr_from = col1.number_input("Desde", value=1580, step=10)
-    yr_to   = col2.number_input("Hasta", value=1750, step=10)
+    yr_from = col1.number_input("Desde", value=1780, step=10)
+    yr_to   = col2.number_input("Hasta", value=1950, step=10)
 
     # ── Personajes: checkboxes + botón borrar ─────────────
     st.markdown("### 👤 Personajes")
@@ -154,8 +154,8 @@ with st.sidebar:
     with st.expander("➕ Añadir personaje"):
         np_nombre = st.text_input("Nombre", key="np_nombre")
         c1, c2 = st.columns(2)
-        np_nac  = c1.number_input("Año nacimiento", value=1600, step=1, key="np_nac")
-        np_muer = c2.number_input("Año muerte",     value=1680, step=1, key="np_muer")
+        np_nac  = c1.number_input("Año nacimiento", value=1800, step=1, key="np_nac")
+        np_muer = c2.number_input("Año muerte",     value=1880, step=1, key="np_muer")
         np_gen  = st.radio("Género", ["♂ Hombre", "♀ Mujer"], horizontal=True, key="np_gen")
         c3, c4  = st.columns(2)
         np_nac_ap  = c3.checkbox("Nac. aprox. (?)", key="np_nac_ap")
