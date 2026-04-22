@@ -7,6 +7,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.ticker import MultipleLocator
+import json
 
 # ════════════════════════════════════════════════════════════
 #   CONFIGURACIÓN DE PÁGINA
@@ -21,27 +22,22 @@ st.set_page_config(
 #   DATOS INICIALES
 # ════════════════════════════════════════════════════════════
 PERSONAS_INIT = [
-    dict(nombre="Pedro",           nac=1780, muer=1845, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Luis",          nac=1716, muer=1894, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Juan",    nac=1811, muer=1865, nac_aprox=True,  muer_aprox=False, genero="H"),
-    dict(nombre="Francisco", nac=1826, muer=1867, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Mateo",     nac=1829, muer=1875, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Victor",        nac=1840, muer=1907, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Lorenzo",      nac=1883, muer=1913, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="García",    nac=1846, muer=1919, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Nicol",  nac=1840, muer=1906, nac_aprox=False, muer_aprox=False, genero="M"),
-    dict(nombre="Anton",  nac=1855, muer=1925, nac_aprox=False, muer_aprox=False, genero="M"),
-    dict(nombre="Paula",    nac=1803, muer=1876, nac_aprox=False, muer_aprox=False, genero="M"),
-    dict(nombre="Gregoria", nac=1830, muer=1885, nac_aprox=True,  muer_aprox=False, genero="M"),
-    dict(nombre="Luisa",    nac=1849, muer=1910, nac_aprox=False, muer_aprox=True,  genero="M"),
-    dict(nombre="Magdalena", nac=1849, muer=1910, nac_aprox=False, muer_aprox=True,  genero="M"),
-    dict(nombre="Antonia",      nac=1875, muer=1940, nac_aprox=True,  muer_aprox=True,  genero="M"),
+    dict(nombre="Pedro",   nac=1800, muer=1875, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Jose",    nac=1810, muer=1890, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Miguel",  nac=1818, muer=1900, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Antonio", nac=1825, muer=1910, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Luis",    nac=1835, muer=1920, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Maria",   nac=1805, muer=1878, nac_aprox=False, muer_aprox=False, genero="M"),
+    dict(nombre="Ana",     nac=1812, muer=1895, nac_aprox=False, muer_aprox=False, genero="M"),
+    dict(nombre="Isabel",  nac=1820, muer=1905, nac_aprox=False, muer_aprox=False, genero="M"),
+    dict(nombre="Laura",   nac=1830, muer=1915, nac_aprox=False, muer_aprox=False, genero="M"),
+    dict(nombre="Bea",     nac=1840, muer=1928, nac_aprox=False, muer_aprox=False, genero="M"),
 ]
 
 SUCESOS_INIT = [
-    dict(nombre="La Batalla",             año=1860, personajes=["Francisco","Juan","Mateo","Victor"]),
-    dict(nombre="Llega al pueblo",         año=1879, personajes=["Victo","Lorenzo","García"]),
-    dict(nombre="Episodio Miguel", año=1873, personajes=["Luisa"]),
+    dict(nombre="Evento 1", año=1852, personajes=["Pedro", "Jose", "Miguel"]),
+    dict(nombre="Evento 2", año=1861, personajes=["Ana", "Laura"]),
+    dict(nombre="Evento 3", año=1868, personajes=["Antonio", "Maria"]),
 ]
 
 # ════════════════════════════════════════════════════════════
@@ -61,7 +57,7 @@ if "personas" not in st.session_state:
 if "sucesos" not in st.session_state:
     st.session_state.sucesos  = [s.copy() for s in SUCESOS_INIT]
 if "titulo" not in st.session_state:
-    st.session_state.titulo = "Gráfica temporal biográfica"
+    st.session_state.titulo = "Mi Gráfica Temporal"
 
 personas = st.session_state.personas
 sucesos  = st.session_state.sucesos
@@ -84,8 +80,8 @@ with st.sidebar:
 
     st.markdown("### 📅 Rango de años")
     col1, col2 = st.columns(2)
-    yr_from = col1.number_input("Desde", value=1780, step=10)
-    yr_to   = col2.number_input("Hasta", value=1950, step=10)
+    yr_from = col1.number_input("Desde", value=1790, step=10)
+    yr_to   = col2.number_input("Hasta", value=1940, step=10)
 
     # ── Personajes: checkboxes + botón borrar ─────────────
     st.markdown("### 👤 Personajes")
@@ -154,8 +150,8 @@ with st.sidebar:
     with st.expander("➕ Añadir personaje"):
         np_nombre = st.text_input("Nombre", key="np_nombre")
         c1, c2 = st.columns(2)
-        np_nac  = c1.number_input("Año nacimiento", value=1800, step=1, key="np_nac")
-        np_muer = c2.number_input("Año muerte",     value=1880, step=1, key="np_muer")
+        np_nac  = c1.number_input("Año nacimiento", value=1600, step=1, key="np_nac")
+        np_muer = c2.number_input("Año muerte",     value=1680, step=1, key="np_muer")
         np_gen  = st.radio("Género", ["♂ Hombre", "♀ Mujer"], horizontal=True, key="np_gen")
         c3, c4  = st.columns(2)
         np_nac_ap  = c3.checkbox("Nac. aprox. (?)", key="np_nac_ap")
@@ -194,12 +190,51 @@ with st.sidebar:
             else:
                 st.error("El nombre es obligatorio")
 
+    # ── Exportar ──────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("### 💾 Exportar / Importar")
+
+    datos_export = json.dumps({
+        "titulo":   st.session_state.titulo,
+        "personas": st.session_state.personas,
+        "sucesos":  st.session_state.sucesos,
+    }, ensure_ascii=False, indent=2)
+
+    st.download_button(
+        label="📥 Exportar mis datos (.json)",
+        data=datos_export,
+        file_name="grafica_temporal.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+
+    # ── Importar ──────────────────────────────────────────
+    archivo = st.file_uploader(
+        "📤 Importar datos (.json)",
+        type="json",
+        help="Sube un archivo exportado anteriormente"
+    )
+    if archivo is not None:
+        try:
+            datos = json.load(archivo)
+            st.session_state.personas = datos["personas"]
+            st.session_state.sucesos  = datos["sucesos"]
+            st.session_state.titulo   = datos.get("titulo", "Gráfica Temporal")
+            # Limpiar checkboxes anteriores para evitar conflictos
+            for k in list(st.session_state.keys()):
+                if k.startswith("p_") or k.startswith("s_"):
+                    del st.session_state[k]
+            st.success("✅ Datos importados correctamente")
+            st.rerun()
+        except Exception as e:
+            st.error(f"❌ Error al leer el archivo: {e}")
+
     # ── Resetear datos ────────────────────────────────────
     st.markdown("---")
     if st.button("🔄 Restablecer datos originales"):
         st.session_state.personas = [p.copy() for p in PERSONAS_INIT]
         st.session_state.sucesos  = [s.copy() for s in SUCESOS_INIT]
-        st.session_state.titulo   = "Pintores de Murcia – s. XVII"
+        st.session_state.titulo   = "Mi Gráfica Temporal"
         st.rerun()
 
 # ════════════════════════════════════════════════════════════
