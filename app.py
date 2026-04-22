@@ -21,27 +21,27 @@ st.set_page_config(
 #   DATOS INICIALES
 # ════════════════════════════════════════════════════════════
 PERSONAS_INIT = [
-    dict(nombre="Pedro",           nac=1780, muer=1845, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Antonio",          nac=1816, muer=1894, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Juan",    nac=1811, muer=1865, nac_aprox=True,  muer_aprox=False, genero="H"),
-    dict(nombre="Francisco", nac=1826, muer=1867, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Mateo",     nac=1829, muer=1875, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Victor",        nac=1840, muer=1907, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Lorenzo",      nac=1883, muer=1913, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="García",    nac=1846, muer=1919, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Nica",  nac=1840, muer=1906, nac_aprox=False, muer_aprox=False, genero="M"),
-    dict(nombre="Rita",  nac=1855, muer=1925, nac_aprox=False, muer_aprox=False, genero="M"),
-    dict(nombre="Isabel",    nac=1803, muer=1876, nac_aprox=False, muer_aprox=False, genero="M"),
-    dict(nombre="Gregoria", nac=1830, muer=1885, nac_aprox=True,  muer_aprox=False, genero="M"),
-    dict(nombre="Luisa",    nac=1849, muer=1910, nac_aprox=False, muer_aprox=True,  genero="M"),
-    dict(nombre="Magdalena", nac=1849, muer=1910, nac_aprox=False, muer_aprox=True,  genero="M"),
-    dict(nombre="Antonia",      nac=1875, muer=1940, nac_aprox=True,  muer_aprox=True,  genero="M"),
+    dict(nombre="Orrente",           nac=1580, muer=1645, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Villacís",          nac=1516, muer=1694, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Juan de Toledo",    nac=1611, muer=1665, nac_aprox=True,  muer_aprox=False, genero="H"),
+    dict(nombre="Francisco Gilarte", nac=1626, muer=1667, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Mateo Gilarte",     nac=1629, muer=1675, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Senen Vila",        nac=1640, muer=1707, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Lorenzo Vila",      nac=1683, muer=1713, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="García-Hidalgo",    nac=1646, muer=1719, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Nicolás de Bussy",  nac=1640, muer=1706, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Antonio Palomino",  nac=1655, muer=1725, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Polo de Medina",    nac=1603, muer=1676, nac_aprox=False, muer_aprox=False, genero="H"),
+    dict(nombre="Gregorio Saavedra", nac=1630, muer=1685, nac_aprox=True,  muer_aprox=False, genero="H"),
+    dict(nombre="Luisa Villacís",    nac=1649, muer=1710, nac_aprox=False, muer_aprox=True,  genero="M"),
+    dict(nombre="Magdalena Gilarte", nac=1649, muer=1710, nac_aprox=False, muer_aprox=True,  genero="M"),
+    dict(nombre="Antonia Vila",      nac=1675, muer=1740, nac_aprox=True,  muer_aprox=True,  genero="M"),
 ]
 
 SUCESOS_INIT = [
-    dict(nombre="La liga",             año=1860, personajes=["Pedro","Juan","Mateo","Victor"]),
-    dict(nombre="Llega al Pueblo ",         año=1879, personajes=["Victor","Lorenzo","García"]),
-    dict(nombre="Episodio penoso", año=1875, personajes=["Luisa"]),
+    dict(nombre="La Batalla",             año=1660, personajes=["Francisco Gilarte","Juan de Toledo","Mateo Gilarte","Senen Vila"]),
+    dict(nombre="Llega a Murcia",         año=1679, personajes=["Senen Vila","Lorenzo Vila","García-Hidalgo"]),
+    dict(nombre="Episodio Miguel Clares", año=1673, personajes=["Luisa Villacís"]),
 ]
 
 # ════════════════════════════════════════════════════════════
@@ -60,6 +60,8 @@ if "personas" not in st.session_state:
     st.session_state.personas = [p.copy() for p in PERSONAS_INIT]
 if "sucesos" not in st.session_state:
     st.session_state.sucesos  = [s.copy() for s in SUCESOS_INIT]
+if "titulo" not in st.session_state:
+    st.session_state.titulo = "Pintores de Murcia – s. XVII"
 
 personas = st.session_state.personas
 sucesos  = st.session_state.sucesos
@@ -71,13 +73,21 @@ with st.sidebar:
     st.markdown("## ⏱ Gráfica Temporal")
     st.markdown("---")
 
-    titulo = st.text_input("📌 Título", value="Grafica temporal de personajes y sucesos")
+    # ── Título editable con botón guardar ─────────────────
+    st.markdown("### 📌 Título")
+    nuevo_titulo = st.text_input("", value=st.session_state.titulo,
+                                 key="input_titulo", label_visibility="collapsed")
+    if st.button("💾 Guardar título"):
+        st.session_state.titulo = nuevo_titulo
+        st.rerun()
+    titulo = st.session_state.titulo
 
     st.markdown("### 📅 Rango de años")
     col1, col2 = st.columns(2)
-    yr_from = col1.number_input("Desde", value=1780, step=10)
-    yr_to   = col2.number_input("Hasta", value=1950, step=10)
+    yr_from = col1.number_input("Desde", value=1580, step=10)
+    yr_to   = col2.number_input("Hasta", value=1750, step=10)
 
+    # ── Personajes: checkboxes + botón borrar ─────────────
     st.markdown("### 👤 Personajes")
     col_a, col_b = st.columns(2)
     if col_a.button("✓ Todos"):
@@ -85,37 +95,58 @@ with st.sidebar:
     if col_b.button("✗ Ninguno"):
         st.session_state["sel_todos"] = False
 
-    # Checkboxes de personajes
     sel_p = {}
+    borrar_p = None
     for p in personas:
-        sym  = "♂" if p["genero"] == "H" else "♀"
-        default = st.session_state.get("sel_todos", True)
+        sym = "♂" if p["genero"] == "H" else "♀"
         key = f"p_{p['nombre']}"
-        # Si ya existe en session_state respetamos su valor
         if key not in st.session_state:
             st.session_state[key] = True
         if "sel_todos" in st.session_state:
             st.session_state[key] = st.session_state["sel_todos"]
-        sel_p[p["nombre"]] = st.checkbox(
+
+        c1, c2 = st.columns([5, 1])
+        sel_p[p["nombre"]] = c1.checkbox(
             f"{sym} {p['nombre']}",
             value=st.session_state[key],
             key=key
         )
-    # Limpiar flag tras aplicar
+        if c2.button("🗑", key=f"del_p_{p['nombre']}", help=f"Borrar {p['nombre']}"):
+            borrar_p = p["nombre"]
+
     if "sel_todos" in st.session_state:
         del st.session_state["sel_todos"]
 
+    if borrar_p:
+        st.session_state.personas = [p for p in personas if p["nombre"] != borrar_p]
+        # Limpiar su checkbox del estado
+        if f"p_{borrar_p}" in st.session_state:
+            del st.session_state[f"p_{borrar_p}"]
+        st.rerun()
+
+    # ── Sucesos: checkboxes + botón borrar ────────────────
     st.markdown("### ⚡ Sucesos")
     sel_s = {}
+    borrar_s = None
     for s in sucesos:
         key = f"s_{s['nombre']}"
         if key not in st.session_state:
             st.session_state[key] = True
-        sel_s[s["nombre"]] = st.checkbox(
+
+        c1, c2 = st.columns([5, 1])
+        sel_s[s["nombre"]] = c1.checkbox(
             f"🔴 {s['nombre']} ({s['año']})",
             value=st.session_state[key],
             key=key
         )
+        if c2.button("🗑", key=f"del_s_{s['nombre']}", help=f"Borrar {s['nombre']}"):
+            borrar_s = s["nombre"]
+
+    if borrar_s:
+        st.session_state.sucesos = [s for s in sucesos if s["nombre"] != borrar_s]
+        if f"s_{borrar_s}" in st.session_state:
+            del st.session_state[f"s_{borrar_s}"]
+        st.rerun()
 
     st.markdown("---")
 
@@ -123,8 +154,8 @@ with st.sidebar:
     with st.expander("➕ Añadir personaje"):
         np_nombre = st.text_input("Nombre", key="np_nombre")
         c1, c2 = st.columns(2)
-        np_nac  = c1.number_input("Año nacimiento", value=1800, step=1, key="np_nac")
-        np_muer = c2.number_input("Año muerte",     value=1880, step=1, key="np_muer")
+        np_nac  = c1.number_input("Año nacimiento", value=1600, step=1, key="np_nac")
+        np_muer = c2.number_input("Año muerte",     value=1680, step=1, key="np_muer")
         np_gen  = st.radio("Género", ["♂ Hombre", "♀ Mujer"], horizontal=True, key="np_gen")
         c3, c4  = st.columns(2)
         np_nac_ap  = c3.checkbox("Nac. aprox. (?)", key="np_nac_ap")
@@ -168,6 +199,7 @@ with st.sidebar:
     if st.button("🔄 Restablecer datos originales"):
         st.session_state.personas = [p.copy() for p in PERSONAS_INIT]
         st.session_state.sucesos  = [s.copy() for s in SUCESOS_INIT]
+        st.session_state.titulo   = "Pintores de Murcia – s. XVII"
         st.rerun()
 
 # ════════════════════════════════════════════════════════════
