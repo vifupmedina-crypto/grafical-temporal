@@ -71,12 +71,12 @@ with st.sidebar:
     st.markdown("## ⏱ Gráfica Temporal")
     st.markdown("---")
 
-    titulo = st.text_input("📌 Título", value="Pintores de Murcia – s. XVII")
+    titulo = st.text_input("📌 Título", value="Grafica temporal de personajes y sucesos")
 
     st.markdown("### 📅 Rango de años")
     col1, col2 = st.columns(2)
-    yr_from = col1.number_input("Desde", value=1580, step=10)
-    yr_to   = col2.number_input("Hasta", value=1750, step=10)
+    yr_from = col1.number_input("Desde", value=1680, step=10)
+    yr_to   = col2.number_input("Hasta", value=1850, step=10)
 
     st.markdown("### 👤 Personajes")
     col_a, col_b = st.columns(2)
@@ -123,8 +123,8 @@ with st.sidebar:
     with st.expander("➕ Añadir personaje"):
         np_nombre = st.text_input("Nombre", key="np_nombre")
         c1, c2 = st.columns(2)
-        np_nac  = c1.number_input("Año nacimiento", value=1600, step=1, key="np_nac")
-        np_muer = c2.number_input("Año muerte",     value=1680, step=1, key="np_muer")
+        np_nac  = c1.number_input("Año nacimiento", value=1700, step=1, key="np_nac")
+        np_muer = c2.number_input("Año muerte",     value=1780, step=1, key="np_muer")
         np_gen  = st.radio("Género", ["♂ Hombre", "♀ Mujer"], horizontal=True, key="np_gen")
         c3, c4  = st.columns(2)
         np_nac_ap  = c3.checkbox("Nac. aprox. (?)", key="np_nac_ap")
