@@ -73,21 +73,28 @@ with st.sidebar:
     st.markdown("## ⏱ Gráfica Temporal")
     st.markdown("---")
 
-    # ── Título editable con botón guardar ─────────────────
-    st.markdown("### 📌 Título")
-    nuevo_titulo = st.text_input("", value=st.session_state.titulo,
-                                 key="input_titulo", label_visibility="collapsed")
-    if st.button("💾 Guardar título"):
-        st.session_state.titulo = nuevo_titulo
-        st.rerun()
-    titulo = st.session_state.titulo
+    # ── Título y años en formulario ───────────────────────
+    with st.form("form_config"):
+        st.markdown("### 📌 Título")
+        nuevo_titulo = st.text_input("Título de la gráfica",
+                                     value=st.session_state.titulo)
+        st.markdown("### 📅 Rango de años")
+        col1, col2 = st.columns(2)
+        nuevo_yr_from = col1.number_input("Desde", value=st.session_state.yr_from,
+                                          min_value=0, max_value=2100, step=10)
+        nuevo_yr_to   = col2.number_input("Hasta", value=st.session_state.yr_to,
+                                          min_value=0, max_value=2100, step=10)
+        submitted = st.form_submit_button("🔄 Actualizar gráfica",
+                                          type="primary", use_container_width=True)
+        if submitted:
+            st.session_state.titulo  = nuevo_titulo
+            st.session_state.yr_from = int(nuevo_yr_from)
+            st.session_state.yr_to   = int(nuevo_yr_to)
+            st.rerun()
 
-    st.markdown("### 📅 Rango de años")
-    col1, col2 = st.columns(2)
-    yr_from = col1.number_input("Desde", value=st.session_state.yr_from, step=10, key="input_yr_from")
-    yr_to   = col2.number_input("Hasta", value=st.session_state.yr_to,   step=10, key="input_yr_to")
-    st.session_state.yr_from = int(yr_from)
-    st.session_state.yr_to   = int(yr_to)
+    titulo  = st.session_state.titulo
+    yr_from = st.session_state.yr_from
+    yr_to   = st.session_state.yr_to
 
     # ── Personajes: checkboxes + botón borrar ─────────────
     st.markdown("### 👤 Personajes")
@@ -225,12 +232,12 @@ with st.sidebar:
     if archivo is not None:
         try:
             datos = json.load(archivo)
-            st.session_state.personas = datos["personas"]
-            st.session_state.sucesos  = datos["sucesos"]
-            st.session_state.titulo   = datos.get("titulo",  "Gráfica Temporal")
-            st.session_state.yr_from  = datos.get("yr_from", 1500)
-            st.session_state.yr_to    = datos.get("yr_to",   1800)
-            # Limpiar checkboxes anteriores para evitar conflictos
+            st.session_state.personas      = datos["personas"]
+            st.session_state.sucesos       = datos["sucesos"]
+            st.session_state.titulo        = datos.get("titulo",  "Gráfica Temporal")
+            st.session_state.yr_from       = datos.get("yr_from", 1500)
+            st.session_state.yr_to         = datos.get("yr_to",   1800)
+            # Borrar las keys de widgets para que se reinicialicen con los valores nuevos
             for k in list(st.session_state.keys()):
                 if k.startswith("p_") or k.startswith("s_"):
                     del st.session_state[k]
@@ -247,14 +254,15 @@ with st.sidebar:
         st.session_state.titulo   = "Mi Gráfica Temporal"
         st.session_state.yr_from  = 1790
         st.session_state.yr_to    = 1940
+        for k in list(st.session_state.keys()):
+            if k.startswith("p_") or k.startswith("s_"):
+                del st.session_state[k]
         st.rerun()
 
 # ════════════════════════════════════════════════════════════
 #   DIBUJO DE LA GRÁFICA
 # ════════════════════════════════════════════════════════════
-yr_from = int(yr_from)
-yr_to   = int(yr_to)
-span    = max(yr_to - yr_from, 1)
+span = max(yr_to - yr_from, 1)
 
 # Filtrar personajes visibles
 visibles = []
