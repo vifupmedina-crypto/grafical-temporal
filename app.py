@@ -111,12 +111,24 @@ with st.sidebar:
                                           min_value=0, max_value=2100, step=10)
         nuevo_yr_to   = col2.number_input("Hasta", value=st.session_state.yr_to,
                                           min_value=0, max_value=2100, step=10)
+        st.markdown("### 🔀 Orden de personajes")
+        nuevo_orden = st.selectbox("Ordenar por", [
+            "Orden de entrada",
+            "Fecha de nacimiento",
+            "Fecha de muerte",
+            "Género (♂ primero)",
+            "Género (♀ primero)",
+            "Familia",
+        ], index=["Orden de entrada","Fecha de nacimiento","Fecha de muerte",
+                  "Género (♂ primero)","Género (♀ primero)","Familia"
+                  ].index(st.session_state.get("orden", "Orden de entrada")))
         submitted = st.form_submit_button("🔄 Actualizar gráfica",
                                           type="primary", use_container_width=True)
         if submitted:
             st.session_state.titulo  = nuevo_titulo
             st.session_state.yr_from = int(nuevo_yr_from)
             st.session_state.yr_to   = int(nuevo_yr_to)
+            st.session_state.orden   = nuevo_orden
             st.rerun()
 
     titulo  = st.session_state.titulo
@@ -501,6 +513,22 @@ for p in personas:
         continue
     visibles.append(p)
 
+# Ordenar según preferencia
+orden = st.session_state.get("orden", "Orden de entrada")
+if orden == "Fecha de nacimiento":
+    visibles.sort(key=lambda p: p["nac"]  or 0)
+elif orden == "Fecha de muerte":
+    visibles.sort(key=lambda p: p["muer"] or 0)
+elif orden == "Género (♂ primero)":
+    visibles.sort(key=lambda p: (0 if p["genero"] == "H" else 1, p["nac"] or 0))
+elif orden == "Género (♀ primero)":
+    visibles.sort(key=lambda p: (0 if p["genero"] == "M" else 1, p["nac"] or 0))
+elif orden == "Familia":
+    def sort_familia(p):
+        fams = [f["nombre"] for f in familias if p["nombre"] in f["miembros"]]
+        return (fams[0] if fams else "zzz", p["nac"] or 0)
+    visibles.sort(key=sort_familia)
+
 n_rows  = len(visibles)
 total_h = max(n_rows, 1) * ROW_H + 0.8
 
@@ -660,6 +688,18 @@ ax.set_xlabel("Año", labelpad=5, fontsize=9, color="#555")
 fig.tight_layout(rect=[0, 0.02, 1, 0.98])
 
 st.pyplot(fig, use_container_width=True)
+
+# ── Exportar gráfica como imagen ─────────────────────────
+import io
+buf = io.BytesIO()
+fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+buf.seek(0)
+st.download_button(
+    label="📷 Descargar gráfica como PNG",
+    data=buf,
+    file_name=f"{titulo}.png",
+    mime="image/png",
+)
 plt.close(fig)
 
 # Pie de página
