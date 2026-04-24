@@ -230,21 +230,23 @@ with st.sidebar:
         help="Sube un archivo exportado anteriormente"
     )
     if archivo is not None:
-        try:
-            datos = json.load(archivo)
-            st.session_state.personas      = datos["personas"]
-            st.session_state.sucesos       = datos["sucesos"]
-            st.session_state.titulo        = datos.get("titulo",  "Gráfica Temporal")
-            st.session_state.yr_from       = datos.get("yr_from", 1500)
-            st.session_state.yr_to         = datos.get("yr_to",   1800)
-            # Borrar las keys de widgets para que se reinicialicen con los valores nuevos
-            for k in list(st.session_state.keys()):
-                if k.startswith("p_") or k.startswith("s_"):
-                    del st.session_state[k]
-            st.success("✅ Datos importados correctamente")
-            st.rerun()
-        except Exception as e:
-            st.error(f"❌ Error al leer el archivo: {e}")
+        file_id = archivo.name + str(archivo.size)
+        if st.session_state.get("last_imported") != file_id:
+            try:
+                datos = json.load(archivo)
+                st.session_state.personas = datos["personas"]
+                st.session_state.sucesos  = datos["sucesos"]
+                st.session_state.titulo   = datos.get("titulo",  "Gráfica Temporal")
+                st.session_state.yr_from  = datos.get("yr_from", 1500)
+                st.session_state.yr_to    = datos.get("yr_to",   1800)
+                for k in list(st.session_state.keys()):
+                    if k.startswith("p_") or k.startswith("s_"):
+                        del st.session_state[k]
+                st.session_state.last_imported = file_id
+                st.success("✅ Datos importados correctamente")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Error al leer el archivo: {e}")
 
     # ── Resetear datos ────────────────────────────────────
     st.markdown("---")
@@ -404,3 +406,4 @@ st.markdown(
     "</div>",
     unsafe_allow_html=True
 )
+
