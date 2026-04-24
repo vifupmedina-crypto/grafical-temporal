@@ -180,10 +180,11 @@ with st.sidebar:
             else:
                 st.session_state[key] = not tiene_familia and mostrar_sin_familia
 
-    # ── Personajes: checkboxes + botón borrar ─────────────
+    # ── Personajes: checkboxes + botones editar/borrar ────
     st.markdown("### 👤 Personajes")
-    sel_p = {}
+    sel_p    = {}
     borrar_p = None
+    editar_p = None
     for p in personas:
         sym  = "♂" if p["genero"] == "H" else "♀"
         key  = f"p_{p['nombre']}"
@@ -191,37 +192,134 @@ with st.sidebar:
             st.session_state[key] = True
         fams    = persona_familias(p["nombre"])
         fam_tag = f" ({', '.join(fams)})" if fams else ""
-        c1, c2  = st.columns([5, 1])
+        c1, c2, c3 = st.columns([5, 1, 1])
         sel_p[p["nombre"]] = c1.checkbox(
             f"{sym} {p['nombre']}{fam_tag}",
             value=st.session_state[key],
             key=key
         )
-        if c2.button("🗑", key=f"del_p_{p['nombre']}", help=f"Borrar {p['nombre']}"):
+        if c2.button("✏️", key=f"edit_p_{p['nombre']}", help=f"Editar {p['nombre']}"):
+            st.session_state["editing_persona"] = p["nombre"]
+        if c3.button("🗑", key=f"del_p_{p['nombre']}", help=f"Borrar {p['nombre']}"):
             borrar_p = p["nombre"]
 
     if borrar_p:
         st.session_state.personas = [p for p in personas if p["nombre"] != borrar_p]
-        # Quitar persona de todas las familias también
         for f in st.session_state.familias:
             f["miembros"] = [m for m in f["miembros"] if m != borrar_p]
         if f"p_{borrar_p}" in st.session_state:
             del st.session_state[f"p_{borrar_p}"]
         st.rerun()
 
-    # ── Familias: checkboxes + botón borrar ───────────────
+    # Formulario de edición de personaje
+    ep_nombre = st.session_state.get("editing_persona")
+    if ep_nombre:
+        ep = next((p for p in personas if p["nombre"] == ep_nombre), None)
+        if ep:
+            st.markdown(f"##### ✏️ Editando: **{ep_nombre}**")
+            with st.form("form_edit_persona"):
+                ep_nom_new  = st.text_input("Nombre",          value=ep["nombre"])
+                c1, c2      = st.columns(2)
+                ep_nac_new  = c1.number_input("Año nacimiento", value=ep["nac"]  or 1600, step=1)
+                ep_muer_new = c2.number_input("Año muerte",     value=ep["muer"] or 1700, step=1)
+                ep_gen_new  = st.radio("Género",
+                                       ["♂ Hombre", "♀ Mujer"],
+                                       index=0 if ep["genero"] == "H" else 1,
+                                       horizontal=True)
+                c3, c4      = st.columns(2)
+                ep_nac_ap   = c3.checkbox("Nac. aprox. (?)",  value=ep.get("nac_aprox",  False))
+                ep_muer_ap  = c4.checkbox("Muer. aprox. (?)", value=ep.get("muer_aprox", False))
+                # Familias actuales
+                fams_actuales = [f["nombre"] for f in st.session_state.familias
+                                 if ep_nombre in f["miembros"]]
+                ep_fams_new = st.multiselect(
+                    "Familias",
+                    options=[f["nombre"] for f in st.session_state.familias],
+                    default=fams_actuales
+                )
+                c_ok, c_cancel = st.columns(2)
+                submitted = c_ok.form_submit_button("💾 Guardar", type="primary",
+                                                    use_container_width=True)
+                cancelled = c_cancel.form_submit_button("✗ Cancelar",
+                                                        use_container_width=True)
+
+            if submitted:
+                # Actualizar datos del personaje
+                for p in st.session_state.personas:
+                    if p["nombre"] == ep_nombre:
+                        p["nombre"]     = ep_nom_new.strip()
+                        p["nac"]        = int(ep_nac_new)
+                        p["muer"]       = int(ep_muer_new)
+                        p["genero"]     = "H" if "Hombre" in ep_gen_new else "M"
+                        p["nac_aprox"]  = ep_nac_ap
+                        p["muer_aprox"] = ep_muer_ap
+                        break
+                # Actualizar familias: quitar de todas y añadir a las seleccionadas
+                for f in st.session_state.familias:
+                    if ep_nombre in f["miembros"]:
+                        f["miembros"].remove(ep_nombre)
+                    if ep_nom_new.strip() in f["miembros"]:
+                        f["miembros"].remove(ep_nom_new.strip())
+                    if f["nombre"] in ep_fams_new:
+                        f["miembros"].append(ep_nom_new.strip())
+                # Limpiar checkbox viejo si cambió el nombre
+                if ep_nom_new.strip() != ep_nombre:
+                    if f"p_{ep_nombre}" in st.session_state:
+                        del st.session_state[f"p_{ep_nombre}"]
+                del st.session_state["editing_persona"]
+                st.rerun()
+
+            if cancelled:
+                del st.session_state["editing_persona"]
+                st.rerun()
+
+    # ── Familias: lista + botones editar/borrar ────────────
     st.markdown("### 🏠 Familias")
     borrar_f = None
     for f in familias:
-        c1, c2 = st.columns([5, 1])
         miembros_str = ", ".join(f["miembros"]) if f["miembros"] else "sin miembros"
+        c1, c2, c3 = st.columns([5, 1, 1])
         c1.markdown(f"**{f['nombre']}**: {miembros_str}")
-        if c2.button("🗑", key=f"del_f_{f['nombre']}", help=f"Borrar familia {f['nombre']}"):
+        if c2.button("✏️", key=f"edit_f_{f['nombre']}", help=f"Editar familia {f['nombre']}"):
+            st.session_state["editing_familia"] = f["nombre"]
+        if c3.button("🗑", key=f"del_f_{f['nombre']}", help=f"Borrar familia {f['nombre']}"):
             borrar_f = f["nombre"]
 
     if borrar_f:
         st.session_state.familias = [f for f in familias if f["nombre"] != borrar_f]
         st.rerun()
+
+    # Formulario de edición de familia
+    ef_nombre = st.session_state.get("editing_familia")
+    if ef_nombre:
+        ef = next((f for f in familias if f["nombre"] == ef_nombre), None)
+        if ef:
+            st.markdown(f"##### ✏️ Editando familia: **{ef_nombre}**")
+            with st.form("form_edit_familia"):
+                ef_nom_new  = st.text_input("Nombre de la familia", value=ef["nombre"])
+                ef_miem_new = st.multiselect(
+                    "Miembros",
+                    options=[p["nombre"] for p in personas],
+                    default=ef["miembros"]
+                )
+                c_ok, c_cancel = st.columns(2)
+                submitted_f = c_ok.form_submit_button("💾 Guardar", type="primary",
+                                                      use_container_width=True)
+                cancelled_f = c_cancel.form_submit_button("✗ Cancelar",
+                                                          use_container_width=True)
+
+            if submitted_f:
+                for f in st.session_state.familias:
+                    if f["nombre"] == ef_nombre:
+                        f["nombre"]   = ef_nom_new.strip()
+                        f["miembros"] = list(ef_miem_new)
+                        break
+                del st.session_state["editing_familia"]
+                st.rerun()
+
+            if cancelled_f:
+                del st.session_state["editing_familia"]
+                st.rerun()
 
     # ── Sucesos: checkboxes + botón borrar ────────────────
     st.markdown("### ⚡ Sucesos")
@@ -571,4 +669,3 @@ st.markdown(
     "</div>",
     unsafe_allow_html=True
 )
-
