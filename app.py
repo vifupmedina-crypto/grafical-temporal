@@ -40,14 +40,38 @@ SUCESOS_INIT = [
     dict(nombre="Evento 3", año=1868, personajes=["Antonio", "Maria"]),
 ]
 
+FAMILIAS_INIT = [
+    dict(nombre="Pérez",  miembros=["Pedro", "Jose", "Maria"]),
+    dict(nombre="García", miembros=["Miguel", "Antonio", "Luis"]),
+    dict(nombre="López",  miembros=["Luis", "Ana", "Isabel"]),
+]
+
 # ════════════════════════════════════════════════════════════
 #   COLORES
 # ════════════════════════════════════════════════════════════
-COLOR_H   = "#d4763b"
-COLOR_M   = "#4a90d9"
-COLOR_EVT = "#c0392b"
+COLOR_H   = "#2E86AB"   # azul acero  — hombres
+COLOR_M   = "#9B59B6"   # púrpura     — mujeres
+COLOR_EVT = "#E74C3C"   # rojo        — sucesos
 ROW_H     = 1.0
 ARROW_SC  = 9
+
+# Paleta para familias (distinta de H, M y EVT)
+PALETA_FAMILIAS = [
+    "#27AE60",  # verde esmeralda
+    "#F39C12",  # ámbar
+    "#E91E63",  # magenta
+    "#1ABC9C",  # turquesa
+    "#FF5722",  # naranja profundo
+    "#795548",  # marrón
+    "#607D8B",  # gris azulado
+    "#CDDC39",  # lima
+]
+
+def color_familia(nombre_familia, lista_familias):
+    """Devuelve siempre el mismo color para una familia dada."""
+    nombres = [f["nombre"] for f in lista_familias]
+    idx = nombres.index(nombre_familia) if nombre_familia in nombres else 0
+    return PALETA_FAMILIAS[idx % len(PALETA_FAMILIAS)]
 
 # ════════════════════════════════════════════════════════════
 #   SESSION STATE  (memoria entre interacciones)
@@ -56,6 +80,8 @@ if "personas" not in st.session_state:
     st.session_state.personas = [p.copy() for p in PERSONAS_INIT]
 if "sucesos" not in st.session_state:
     st.session_state.sucesos  = [s.copy() for s in SUCESOS_INIT]
+if "familias" not in st.session_state:
+    st.session_state.familias = [f.copy() for f in FAMILIAS_INIT]
 if "titulo" not in st.session_state:
     st.session_state.titulo = "Mi Gráfica Temporal"
 if "yr_from" not in st.session_state:
@@ -65,6 +91,7 @@ if "yr_to" not in st.session_state:
 
 personas = st.session_state.personas
 sucesos  = st.session_state.sucesos
+familias = st.session_state.familias
 
 # ════════════════════════════════════════════════════════════
 #   BARRA LATERAL (controles)
@@ -96,41 +123,104 @@ with st.sidebar:
     yr_from = st.session_state.yr_from
     yr_to   = st.session_state.yr_to
 
-    # ── Personajes: checkboxes + botón borrar ─────────────
-    st.markdown("### 👤 Personajes")
-    col_a, col_b = st.columns(2)
-    if col_a.button("✓ Todos"):
-        st.session_state["sel_todos"] = True
-    if col_b.button("✗ Ninguno"):
-        st.session_state["sel_todos"] = False
+    # ── Filtros rápidos ───────────────────────────────────
+    st.markdown("### 🔍 Filtros rápidos")
 
-    sel_p = {}
-    borrar_p = None
+    # Fila 1: Todos / Ninguno / Solo H / Solo M
+    c1, c2, c3, c4 = st.columns(4)
+    if c1.button("✓ Todos",   use_container_width=True):
+        st.session_state["filtro_rapido"] = "todos"
+    if c2.button("✗ Ninguno", use_container_width=True):
+        st.session_state["filtro_rapido"] = "ninguno"
+    if c3.button("♂ H",       use_container_width=True):
+        st.session_state["filtro_rapido"] = "hombres"
+    if c4.button("♀ M",       use_container_width=True):
+        st.session_state["filtro_rapido"] = "mujeres"
+
+    # Filtro por familia
+    nombres_familias = [f["nombre"] for f in familias]
+    fam_sel = st.multiselect(
+        "🏠 Mostrar familias",
+        options=nombres_familias,
+        placeholder="Selecciona una o varias familias...",
+        key="filtro_familias"
+    )
+    mostrar_sin_familia = st.checkbox(
+        "Incluir personas sin familia",
+        value=True,
+        key="filtro_sin_familia"
+    )
+    if st.button("Aplicar filtro familiar", use_container_width=True):
+        st.session_state["filtro_rapido"] = "familia"
+
+    # Aplicar filtro rápido a los checkboxes
+    filtro = st.session_state.pop("filtro_rapido", None)
+
+    def persona_familias(nombre):
+        return [f["nombre"] for f in familias if nombre in f["miembros"]]
+
     for p in personas:
-        sym = "♂" if p["genero"] == "H" else "♀"
         key = f"p_{p['nombre']}"
         if key not in st.session_state:
             st.session_state[key] = True
-        if "sel_todos" in st.session_state:
-            st.session_state[key] = st.session_state["sel_todos"]
+        if filtro == "todos":
+            st.session_state[key] = True
+        elif filtro == "ninguno":
+            st.session_state[key] = False
+        elif filtro == "hombres":
+            st.session_state[key] = p["genero"] == "H"
+        elif filtro == "mujeres":
+            st.session_state[key] = p["genero"] == "M"
+        elif filtro == "familia":
+            p_fams = persona_familias(p["nombre"])
+            tiene_familia = len(p_fams) > 0
+            en_fam_sel   = any(f in fam_sel for f in p_fams)
+            if fam_sel:
+                st.session_state[key] = en_fam_sel or (not tiene_familia and mostrar_sin_familia)
+            else:
+                st.session_state[key] = not tiene_familia and mostrar_sin_familia
 
-        c1, c2 = st.columns([5, 1])
+    # ── Personajes: checkboxes + botón borrar ─────────────
+    st.markdown("### 👤 Personajes")
+    sel_p = {}
+    borrar_p = None
+    for p in personas:
+        sym  = "♂" if p["genero"] == "H" else "♀"
+        key  = f"p_{p['nombre']}"
+        if key not in st.session_state:
+            st.session_state[key] = True
+        fams    = persona_familias(p["nombre"])
+        fam_tag = f" ({', '.join(fams)})" if fams else ""
+        c1, c2  = st.columns([5, 1])
         sel_p[p["nombre"]] = c1.checkbox(
-            f"{sym} {p['nombre']}",
+            f"{sym} {p['nombre']}{fam_tag}",
             value=st.session_state[key],
             key=key
         )
         if c2.button("🗑", key=f"del_p_{p['nombre']}", help=f"Borrar {p['nombre']}"):
             borrar_p = p["nombre"]
 
-    if "sel_todos" in st.session_state:
-        del st.session_state["sel_todos"]
-
     if borrar_p:
         st.session_state.personas = [p for p in personas if p["nombre"] != borrar_p]
-        # Limpiar su checkbox del estado
+        # Quitar persona de todas las familias también
+        for f in st.session_state.familias:
+            f["miembros"] = [m for m in f["miembros"] if m != borrar_p]
         if f"p_{borrar_p}" in st.session_state:
             del st.session_state[f"p_{borrar_p}"]
+        st.rerun()
+
+    # ── Familias: checkboxes + botón borrar ───────────────
+    st.markdown("### 🏠 Familias")
+    borrar_f = None
+    for f in familias:
+        c1, c2 = st.columns([5, 1])
+        miembros_str = ", ".join(f["miembros"]) if f["miembros"] else "sin miembros"
+        c1.markdown(f"**{f['nombre']}**: {miembros_str}")
+        if c2.button("🗑", key=f"del_f_{f['nombre']}", help=f"Borrar familia {f['nombre']}"):
+            borrar_f = f["nombre"]
+
+    if borrar_f:
+        st.session_state.familias = [f for f in familias if f["nombre"] != borrar_f]
         st.rerun()
 
     # ── Sucesos: checkboxes + botón borrar ────────────────
@@ -169,6 +259,11 @@ with st.sidebar:
         c3, c4  = st.columns(2)
         np_nac_ap  = c3.checkbox("Nac. aprox. (?)", key="np_nac_ap")
         np_muer_ap = c4.checkbox("Muer. aprox. (?)", key="np_muer_ap")
+        np_familias = st.multiselect(
+            "Familias (opcional)",
+            options=[f["nombre"] for f in st.session_state.familias],
+            key="np_familias"
+        )
         if st.button("Añadir personaje", type="primary"):
             if np_nombre.strip():
                 personas.append(dict(
@@ -177,6 +272,10 @@ with st.sidebar:
                     nac_aprox=np_nac_ap, muer_aprox=np_muer_ap,
                     genero="H" if "Hombre" in np_gen else "M"
                 ))
+                # Añadir a las familias seleccionadas
+                for f in st.session_state.familias:
+                    if f["nombre"] in np_familias:
+                        f["miembros"].append(np_nombre.strip())
                 st.success(f"✅ '{np_nombre}' añadido")
                 st.rerun()
             else:
@@ -203,6 +302,30 @@ with st.sidebar:
             else:
                 st.error("El nombre es obligatorio")
 
+    # ── Añadir familia ────────────────────────────────────
+    with st.expander("➕ Añadir familia"):
+        nf_nombre = st.text_input("Nombre de la familia", key="nf_nombre")
+        nf_miembros = st.multiselect(
+            "Miembros",
+            options=[p["nombre"] for p in personas],
+            key="nf_miembros"
+        )
+        if st.button("Añadir familia", type="primary"):
+            if nf_nombre.strip():
+                # Comprobar si ya existe
+                nombres_fam = [f["nombre"] for f in st.session_state.familias]
+                if nf_nombre.strip() in nombres_fam:
+                    st.error("Ya existe una familia con ese nombre")
+                else:
+                    st.session_state.familias.append(dict(
+                        nombre=nf_nombre.strip(),
+                        miembros=list(nf_miembros)
+                    ))
+                    st.success(f"✅ Familia '{nf_nombre}' añadida")
+                    st.rerun()
+            else:
+                st.error("El nombre es obligatorio")
+
     # ── Exportar ──────────────────────────────────────────
     st.markdown("---")
     st.markdown("### 💾 Exportar / Importar")
@@ -213,6 +336,7 @@ with st.sidebar:
         "yr_to":    st.session_state.yr_to,
         "personas": st.session_state.personas,
         "sucesos":  st.session_state.sucesos,
+        "familias": st.session_state.familias,
     }, ensure_ascii=False, indent=2)
 
     st.download_button(
@@ -236,6 +360,7 @@ with st.sidebar:
                 datos = json.load(archivo)
                 st.session_state.personas = datos["personas"]
                 st.session_state.sucesos  = datos["sucesos"]
+                st.session_state.familias = datos.get("familias", [])
                 st.session_state.titulo   = datos.get("titulo",  "Gráfica Temporal")
                 st.session_state.yr_from  = datos.get("yr_from", 1500)
                 st.session_state.yr_to    = datos.get("yr_to",   1800)
@@ -253,6 +378,7 @@ with st.sidebar:
     if st.button("🔄 Restablecer datos originales"):
         st.session_state.personas = [p.copy() for p in PERSONAS_INIT]
         st.session_state.sucesos  = [s.copy() for s in SUCESOS_INIT]
+        st.session_state.familias = [f.copy() for f in FAMILIAS_INIT]
         st.session_state.titulo   = "Mi Gráfica Temporal"
         st.session_state.yr_from  = 1790
         st.session_state.yr_to    = 1940
@@ -311,10 +437,24 @@ else:
     for yr in range(yr_from, yr_to + 1, tick_major):
         ax.axvline(yr, color="#e2e5ea", linewidth=0.6, zorder=0)
 
+    # Bandas alternas de fondo neutro (base)
     for i in range(n_rows):
         yb = total_h - (i + 1) * ROW_H
         if i % 2 == 0:
             ax.axhspan(yb, yb + ROW_H, color="#f0f3f8", zorder=0)
+
+    # ── A) Bandas de familia ─────────────────────────────
+    for i, p in enumerate(visibles):
+        p_fams = [f["nombre"] for f in familias if p["nombre"] in f["miembros"]]
+        if not p_fams:
+            continue
+        yb   = total_h - (i + 1) * ROW_H
+        n_f  = len(p_fams)
+        h_f  = ROW_H / n_f
+        for j, fam in enumerate(p_fams):
+            col_f = color_familia(fam, familias)
+            ax.axhspan(yb + j * h_f, yb + (j + 1) * h_f,
+                       color=col_f, alpha=0.13, zorder=1)
 
     def draw_arrow(x0, x1, y, color, lw=2.2):
         ax.plot([x0, x1], [y, y], color=color, linewidth=lw,
@@ -352,12 +492,28 @@ else:
 
         nac_str  = (str(nac_r)+"?")  if (nac_ap  and nac_r)  else (str(nac_r)  if nac_r  else "?")
         muer_str = (str(muer_r)+"?") if (muer_ap and muer_r) else (str(muer_r) if muer_r else "?")
-        label = f"{sym} {p['nombre']}  {nac_str}–{muer_str}"
 
-        ax.text((x0+x1)/2, y_c+0.14, label,
+        # ── D) Símbolos de familia al final de la etiqueta ──
+        p_fams = [f["nombre"] for f in familias if p["nombre"] in f["miembros"]]
+        dots   = "  " + "  ".join(
+            f"[{fam}]" for fam in p_fams
+        ) if p_fams else ""
+        label  = f"{sym} {p['nombre']}  {nac_str}–{muer_str}"
+
+        x_lbl = (x0 + x1) / 2
+        ax.text(x_lbl, y_c + 0.14, label,
                 color=color, fontsize=8.5, ha="center", va="bottom",
                 fontweight="semibold", zorder=5,
                 bbox=dict(boxstyle="round,pad=0.18", fc="#f8f9fb", ec="none", alpha=0.75))
+
+        # Puntos de color por cada familia, justo a la derecha del texto
+        for k_f, fam in enumerate(p_fams):
+            col_f  = color_familia(fam, familias)
+            offset = span * 0.012 * (k_f + 1)
+            ax.plot(x1 + span * 0.005 + offset * 0.6, y_c + 0.14,
+                    "o", color=col_f, markersize=7,
+                    markeredgecolor="white", markeredgewidth=0.8,
+                    zorder=6, transform=ax.transData, clip_on=False)
 
     for s in sucesos:
         n = s["nombre"]
@@ -385,12 +541,21 @@ else:
                 bbox=dict(boxstyle="round,pad=0.15", fc="#fff8f7",
                           ec=COLOR_EVT, alpha=0.85, linewidth=0.8))
 
-    # Leyenda
-    legend_h = mpatches.Patch(color=COLOR_H, label="♂ Hombre")
-    legend_m = mpatches.Patch(color=COLOR_M, label="♀ Mujer")
-    legend_e = mpatches.Patch(color=COLOR_EVT, label="⚡ Suceso")
-    ax.legend(handles=[legend_h, legend_m, legend_e],
-              loc="lower right", fontsize=8, framealpha=0.85)
+    # Leyenda — género y sucesos
+    legend_handles = [
+        mpatches.Patch(color=COLOR_H,   label="♂ Hombre"),
+        mpatches.Patch(color=COLOR_M,   label="♀ Mujer"),
+        mpatches.Patch(color=COLOR_EVT, label="⚡ Suceso"),
+    ]
+    # Añadir una entrada por cada familia
+    for f in familias:
+        col_f = color_familia(f["nombre"], familias)
+        legend_handles.append(
+            mpatches.Patch(color=col_f, alpha=0.5, label=f"🏠 {f['nombre']}")
+        )
+    ax.legend(handles=legend_handles,
+              loc="lower right", fontsize=8, framealpha=0.9,
+              ncol=2 if len(legend_handles) > 5 else 1)
 
 ax.set_title(titulo, pad=12, fontsize=13, fontweight="bold", color="#1e2030")
 ax.set_xlabel("Año", labelpad=5, fontsize=9, color="#555")
