@@ -6,8 +6,10 @@ Ejecutar con:  streamlit run app.py
 import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
 from matplotlib.ticker import MultipleLocator
 import json
+import io
 
 # ════════════════════════════════════════════════════════════
 #   CONFIGURACIÓN DE PÁGINA
@@ -22,16 +24,16 @@ st.set_page_config(
 #   DATOS INICIALES
 # ════════════════════════════════════════════════════════════
 PERSONAS_INIT = [
-    dict(nombre="Pedro",   nac=1800, muer=1875, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Jose",    nac=1810, muer=1890, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Miguel",  nac=1818, muer=1900, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Antonio", nac=1825, muer=1910, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Luis",    nac=1835, muer=1920, nac_aprox=False, muer_aprox=False, genero="H"),
-    dict(nombre="Maria",   nac=1805, muer=1878, nac_aprox=False, muer_aprox=False, genero="M"),
-    dict(nombre="Ana",     nac=1812, muer=1895, nac_aprox=False, muer_aprox=False, genero="M"),
-    dict(nombre="Isabel",  nac=1820, muer=1905, nac_aprox=False, muer_aprox=False, genero="M"),
-    dict(nombre="Laura",   nac=1830, muer=1915, nac_aprox=False, muer_aprox=False, genero="M"),
-    dict(nombre="Bea",     nac=1840, muer=1928, nac_aprox=False, muer_aprox=False, genero="M"),
+    dict(nombre="Pedro",   nac=1800, muer=1875, nac_aprox=False, muer_aprox=False, genero="H", notas=""),
+    dict(nombre="Jose",    nac=1810, muer=1890, nac_aprox=False, muer_aprox=False, genero="H", notas=""),
+    dict(nombre="Miguel",  nac=1818, muer=1900, nac_aprox=False, muer_aprox=False, genero="H", notas=""),
+    dict(nombre="Antonio", nac=1825, muer=1910, nac_aprox=False, muer_aprox=False, genero="H", notas=""),
+    dict(nombre="Luis",    nac=1835, muer=1920, nac_aprox=False, muer_aprox=False, genero="H", notas=""),
+    dict(nombre="Maria",   nac=1805, muer=1878, nac_aprox=False, muer_aprox=False, genero="M", notas=""),
+    dict(nombre="Ana",     nac=1812, muer=1895, nac_aprox=False, muer_aprox=False, genero="M", notas=""),
+    dict(nombre="Isabel",  nac=1820, muer=1905, nac_aprox=False, muer_aprox=False, genero="M", notas=""),
+    dict(nombre="Laura",   nac=1830, muer=1915, nac_aprox=False, muer_aprox=False, genero="M", notas=""),
+    dict(nombre="Bea",     nac=1840, muer=1928, nac_aprox=False, muer_aprox=False, genero="M", notas=""),
 ]
 
 SUCESOS_INIT = [
@@ -249,6 +251,8 @@ with st.sidebar:
                     options=[f["nombre"] for f in st.session_state.familias],
                     default=fams_actuales
                 )
+                ep_notas_new = st.text_area("📝 Notas", value=ep.get("notas", ""),
+                                            height=100, placeholder="Observaciones, fuentes, datos biográficos...")
                 c_ok, c_cancel = st.columns(2)
                 submitted = c_ok.form_submit_button("💾 Guardar", type="primary",
                                                     use_container_width=True)
@@ -265,6 +269,7 @@ with st.sidebar:
                         p["genero"]     = "H" if "Hombre" in ep_gen_new else "M"
                         p["nac_aprox"]  = ep_nac_ap
                         p["muer_aprox"] = ep_muer_ap
+                        p["notas"]      = ep_notas_new.strip()
                         break
                 # Actualizar familias: quitar de todas y añadir a las seleccionadas
                 for f in st.session_state.familias:
@@ -333,22 +338,24 @@ with st.sidebar:
                 del st.session_state["editing_familia"]
                 st.rerun()
 
-    # ── Sucesos: checkboxes + botón borrar ────────────────
+    # ── Sucesos: checkbox mostrar + editar + borrar ────────
     st.markdown("### ⚡ Sucesos")
-    sel_s = {}
+    sel_s    = {}
     borrar_s = None
+    editar_s = None
     for s in sucesos:
         key = f"s_{s['nombre']}"
         if key not in st.session_state:
             st.session_state[key] = True
-
-        c1, c2 = st.columns([5, 1])
+        c1, c2, c3 = st.columns([5, 1, 1])
         sel_s[s["nombre"]] = c1.checkbox(
             f"🔴 {s['nombre']} ({s['año']})",
             value=st.session_state[key],
             key=key
         )
-        if c2.button("🗑", key=f"del_s_{s['nombre']}", help=f"Borrar {s['nombre']}"):
+        if c2.button("✏️", key=f"edit_s_{s['nombre']}", help=f"Editar {s['nombre']}"):
+            st.session_state["editing_suceso"] = s["nombre"]
+        if c3.button("🗑", key=f"del_s_{s['nombre']}", help=f"Borrar {s['nombre']}"):
             borrar_s = s["nombre"]
 
     if borrar_s:
@@ -356,6 +363,44 @@ with st.sidebar:
         if f"s_{borrar_s}" in st.session_state:
             del st.session_state[f"s_{borrar_s}"]
         st.rerun()
+
+    # Formulario de edición de suceso
+    es_nombre = st.session_state.get("editing_suceso")
+    if es_nombre:
+        es = next((s for s in sucesos if s["nombre"] == es_nombre), None)
+        if es:
+            st.markdown(f"##### ✏️ Editando suceso: **{es_nombre}**")
+            with st.form("form_edit_suceso"):
+                es_nom_new  = st.text_input("Nombre del suceso", value=es["nombre"])
+                es_año_new  = st.number_input("Año", value=es["año"], step=1)
+                es_pers_new = st.multiselect(
+                    "Personajes afectados",
+                    options=[p["nombre"] for p in personas],
+                    default=es["personajes"]
+                )
+                c_ok, c_cancel = st.columns(2)
+                submitted_s = c_ok.form_submit_button("💾 Guardar", type="primary",
+                                                      use_container_width=True)
+                cancelled_s = c_cancel.form_submit_button("✗ Cancelar",
+                                                          use_container_width=True)
+            if submitted_s:
+                for s in st.session_state.sucesos:
+                    if s["nombre"] == es_nombre:
+                        old_key = f"s_{es_nombre}"
+                        s["nombre"]    = es_nom_new.strip()
+                        s["año"]       = int(es_año_new)
+                        s["personajes"] = list(es_pers_new)
+                        break
+                # Actualizar key si cambió el nombre
+                if es_nom_new.strip() != es_nombre:
+                    if f"s_{es_nombre}" in st.session_state:
+                        st.session_state[f"s_{es_nom_new.strip()}"] = \
+                            st.session_state.pop(f"s_{es_nombre}")
+                del st.session_state["editing_suceso"]
+                st.rerun()
+            if cancelled_s:
+                del st.session_state["editing_suceso"]
+                st.rerun()
 
     st.markdown("---")
 
@@ -374,13 +419,16 @@ with st.sidebar:
             options=[f["nombre"] for f in st.session_state.familias],
             key="np_familias"
         )
+        np_notas = st.text_area("📝 Notas (opcional)", key="np_notas", height=80,
+                                placeholder="Observaciones, fuentes, datos biográficos...")
         if st.button("Añadir personaje", type="primary"):
             if np_nombre.strip():
                 personas.append(dict(
                     nombre=np_nombre.strip(),
                     nac=int(np_nac), muer=int(np_muer),
                     nac_aprox=np_nac_ap, muer_aprox=np_muer_ap,
-                    genero="H" if "Hombre" in np_gen else "M"
+                    genero="H" if "Hombre" in np_gen else "M",
+                    notas=np_notas.strip()
                 ))
                 # Añadir a las familias seleccionadas
                 for f in st.session_state.familias:
@@ -529,12 +577,43 @@ elif orden == "Familia":
         return (fams[0] if fams else "zzz", p["nac"] or 0)
     visibles.sort(key=sort_familia)
 
-n_rows  = len(visibles)
-total_h = max(n_rows, 1) * ROW_H + 0.8
+n_rows = len(visibles)
 
-fig_h = max(4.0, n_rows * 0.55 + 1.5)
+# ── Constantes de dibujo ──────────────────────────────────
+GAP_FAM = 0.5
+ROW_H2  = 1.5
+
+y_positions = []  # y central de cada fila
+grupo_cambio = [] # True si hay salto de grupo antes de esta fila
+
+if orden == "Familia" and n_rows > 0:
+    grupos = []
+    for p in visibles:
+        fams = [f["nombre"] for f in familias if p["nombre"] in f["miembros"]]
+        grupos.append(fams[0] if fams else "__sin_familia__")
+    y = 0.4
+    prev = None
+    for i in range(n_rows - 1, -1, -1):
+        if prev is not None and grupos[i] != prev:
+            y += GAP_FAM
+            grupo_cambio.insert(0, True)
+        else:
+            grupo_cambio.insert(0, False)
+        y_positions.insert(0, y + ROW_H2 * 0.4)
+        y += ROW_H2
+        prev = grupos[i]
+    total_h = y + 0.4
+else:
+    for i in range(n_rows):
+        y_positions.append(0.4 + (n_rows - 1 - i) * ROW_H2 + ROW_H2 * 0.4)
+        grupo_cambio.append(False)
+    total_h = max(n_rows, 1) * ROW_H2 + 0.8
+
+fig_h = max(5.0, n_rows * 0.7 + 2.5)
 fig, ax = plt.subplots(figsize=(14, fig_h))
 fig.patch.set_facecolor("white")
+# Margen izquierdo amplio para etiquetas de nombre
+fig.subplots_adjust(left=0.20, right=0.97, top=0.93, bottom=0.18)
 
 if n_rows == 0:
     ax.text(0.5, 0.5, "Sin personajes en el rango seleccionado",
@@ -549,38 +628,49 @@ else:
     tick_minor = tick_major // 2
     ax.xaxis.set_major_locator(MultipleLocator(tick_major))
     ax.xaxis.set_minor_locator(MultipleLocator(tick_minor))
-    ax.tick_params(axis="x", which="major", length=6, labelsize=8.5,
+    ax.tick_params(axis="x", which="major", length=6, labelsize=9,
                    top=True, bottom=True, labeltop=True, labelbottom=True,
                    direction="out", color="#555")
     ax.tick_params(axis="x", which="minor", length=3,
                    top=True, bottom=True, direction="out", color="#aaa")
     ax.yaxis.set_visible(False)
 
-    for spine in ["top","bottom","left","right"]:
+    for spine in ["top", "bottom", "left", "right"]:
         ax.spines[spine].set_edgecolor("#5b9bd5")
         ax.spines[spine].set_linewidth(1.8)
 
+    # Cuadrícula vertical
     for yr in range(yr_from, yr_to + 1, tick_major):
         ax.axvline(yr, color="#e2e5ea", linewidth=0.6, zorder=0)
 
-    # Bandas alternas de fondo neutro (base)
-    for i in range(n_rows):
-        yb = total_h - (i + 1) * ROW_H
+    # Bandas alternas base
+    for i, y_c in enumerate(y_positions):
+        yb = y_c - ROW_H2 * 0.45
+        yt = y_c + ROW_H2 * 0.55
         if i % 2 == 0:
-            ax.axhspan(yb, yb + ROW_H, color="#f0f3f8", zorder=0)
+            ax.axhspan(yb, yt, color="#f0f3f8", zorder=0)
 
-    # ── A) Bandas de familia ─────────────────────────────
+    # Bandas de familia (A)
     for i, p in enumerate(visibles):
         p_fams = [f["nombre"] for f in familias if p["nombre"] in f["miembros"]]
         if not p_fams:
             continue
-        yb   = total_h - (i + 1) * ROW_H
-        n_f  = len(p_fams)
-        h_f  = ROW_H / n_f
+        y_c = y_positions[i]
+        yb  = y_c - ROW_H2 * 0.45
+        yt  = y_c + ROW_H2 * 0.55
+        h_f = (yt - yb) / len(p_fams)
         for j, fam in enumerate(p_fams):
             col_f = color_familia(fam, familias)
             ax.axhspan(yb + j * h_f, yb + (j + 1) * h_f,
                        color=col_f, alpha=0.13, zorder=1)
+
+    # Línea separadora entre grupos de familia
+    if orden == "Familia":
+        for i, cambio in enumerate(grupo_cambio):
+            if cambio and i > 0:
+                y_sep = (y_positions[i] + ROW_H2 * 0.6 + y_positions[i-1] - ROW_H2 * 0.45) / 2
+                ax.axhline(y_sep, color="#aaa", linewidth=0.8,
+                           linestyle="--", zorder=1, alpha=0.5)
 
     def draw_arrow(x0, x1, y, color, lw=2.2):
         ax.plot([x0, x1], [y, y], color=color, linewidth=lw,
@@ -593,12 +683,12 @@ else:
                                    mutation_scale=ARROW_SC), zorder=3)
 
     for i, p in enumerate(visibles):
-        y_c   = total_h - (i + 1) * ROW_H + ROW_H * 0.35
+        y_c   = y_positions[i]
         color = COLOR_H if p["genero"] == "H" else COLOR_M
         sym   = "♂" if p["genero"] == "H" else "♀"
 
-        nac_r  = p["nac"]
-        muer_r = p["muer"]
+        nac_r   = p["nac"]
+        muer_r  = p["muer"]
         nac_ap  = p.get("nac_aprox",  False) or (nac_r  is None)
         muer_ap = p.get("muer_aprox", False) or (muer_r is None)
 
@@ -607,40 +697,45 @@ else:
 
         draw_arrow(x0, x1, y_c, color)
 
+        # Marcadores de fecha aproximada
         if nac_ap and nac_r is not None and yr_from <= nac_r <= yr_to:
             ax.plot(nac_r, y_c, "o", color=color, markersize=5, zorder=4)
-            ax.text(nac_r - span*0.004, y_c+0.08, "?", color=color,
+            ax.text(nac_r - span*0.004, y_c + 0.1, "?", color=color,
                     fontsize=8, ha="right", va="bottom", zorder=4)
         if muer_ap and muer_r is not None and yr_from <= muer_r <= yr_to:
             ax.plot(muer_r, y_c, "o", color=color, markersize=5, zorder=4)
-            ax.text(muer_r + span*0.004, y_c+0.08, "?", color=color,
-                    fontsize=8, ha="left",  va="bottom", zorder=4)
+            ax.text(muer_r + span*0.004, y_c + 0.1, "?", color=color,
+                    fontsize=8, ha="left", va="bottom", zorder=4)
 
         nac_str  = (str(nac_r)+"?")  if (nac_ap  and nac_r)  else (str(nac_r)  if nac_r  else "?")
         muer_str = (str(muer_r)+"?") if (muer_ap and muer_r) else (str(muer_r) if muer_r else "?")
 
-        # ── D) Símbolos de familia al final de la etiqueta ──
+        # ── Nombre + símbolo a la IZQUIERDA (fuera del eje) ──
+        ax.text(yr_from - span * 0.012, y_c + 0.12,
+                f"{sym} {p['nombre']}",
+                color=color, fontsize=11, fontweight="bold",
+                ha="right", va="center", zorder=5, clip_on=False)
+        # Años debajo del nombre
+        ax.text(yr_from - span * 0.012, y_c - 0.22,
+                f"{nac_str} – {muer_str}",
+                color="#333", fontsize=8.5,
+                ha="right", va="center", zorder=5, clip_on=False)
+
+        # 📝 Icono si tiene notas
+        if p.get("notas", "").strip():
+            ax.text(yr_from - span * 0.002, y_c + 0.28, "📝",
+                    fontsize=8, ha="left", va="center", zorder=5, clip_on=False)
+
+        # ── D) Puntos de familia sobre la línea ──────────────
         p_fams = [f["nombre"] for f in familias if p["nombre"] in f["miembros"]]
-        dots   = "  " + "  ".join(
-            f"[{fam}]" for fam in p_fams
-        ) if p_fams else ""
-        label  = f"{sym} {p['nombre']}  {nac_str}–{muer_str}"
-
-        x_lbl = (x0 + x1) / 2
-        ax.text(x_lbl, y_c + 0.14, label,
-                color=color, fontsize=8.5, ha="center", va="bottom",
-                fontweight="semibold", zorder=5,
-                bbox=dict(boxstyle="round,pad=0.18", fc="#f8f9fb", ec="none", alpha=0.75))
-
-        # Puntos de color por cada familia, justo a la derecha del texto
         for k_f, fam in enumerate(p_fams):
             col_f  = color_familia(fam, familias)
-            offset = span * 0.012 * (k_f + 1)
-            ax.plot(x1 + span * 0.005 + offset * 0.6, y_c + 0.14,
-                    "o", color=col_f, markersize=7,
-                    markeredgecolor="white", markeredgewidth=0.8,
-                    zorder=6, transform=ax.transData, clip_on=False)
+            x_dot  = x0 + (x1 - x0) * (0.15 + k_f * 0.12)
+            ax.plot(x_dot, y_c, "o", color=col_f, markersize=9,
+                    markeredgecolor="white", markeredgewidth=1.2,
+                    zorder=5)
 
+    # ── Sucesos ───────────────────────────────────────────
     for s in sucesos:
         n = s["nombre"]
         if not sel_s.get(n, True):
@@ -650,47 +745,59 @@ else:
             continue
         aff = [i for i, p in enumerate(visibles) if p["nombre"] in s["personajes"]]
         if aff:
-            y_bot = total_h - (max(aff)+1)*ROW_H + ROW_H*0.1
-            y_top = total_h - (min(aff)+1)*ROW_H + ROW_H*0.6
+            y_bot = y_positions[max(aff)] - ROW_H2 * 0.35
+            y_top = y_positions[min(aff)] + ROW_H2 * 0.5
         else:
-            y_bot, y_top = 0.1, total_h-0.1
+            y_bot, y_top = 0.1, total_h - 0.1
 
         ax.plot([año, año], [y_bot, y_top], color=COLOR_EVT, linewidth=2.5, zorder=4)
         for i, p in enumerate(visibles):
             if p["nombre"] in s["personajes"]:
-                y_c = total_h - (i+1)*ROW_H + ROW_H*0.35
-                ax.plot(año, y_c, "o", color=COLOR_EVT, markersize=7, zorder=6,
-                        markeredgecolor="white", markeredgewidth=1)
-        ax.text(año + span*0.006, y_top+0.05, n,
-                color=COLOR_EVT, fontsize=8, rotation=90,
-                ha="left", va="bottom", fontweight="bold", zorder=7,
-                bbox=dict(boxstyle="round,pad=0.15", fc="#fff8f7",
+                y_c = y_positions[i]
+                ax.plot(año, y_c, "o", color=COLOR_EVT, markersize=8, zorder=6,
+                        markeredgecolor="white", markeredgewidth=1.2)
+        # Nombre del evento en horizontal encima de la línea
+        ax.text(año, y_top + 0.12, n,
+                color=COLOR_EVT, fontsize=8, rotation=0,
+                ha="center", va="bottom", fontweight="bold", zorder=7,
+                bbox=dict(boxstyle="round,pad=0.18", fc="#fff8f7",
                           ec=COLOR_EVT, alpha=0.85, linewidth=0.8))
 
-    # Leyenda — género y sucesos
+    # ── Título grande ─────────────────────────────────────
+    ax.set_title(titulo, pad=14, fontsize=18, fontweight="bold", color="#1e2030")
+    ax.set_xlabel("")
+
+    # ── Leyenda horizontal debajo del gráfico ────────────
     legend_handles = [
-        mpatches.Patch(color=COLOR_H,   label="♂ Hombre"),
-        mpatches.Patch(color=COLOR_M,   label="♀ Mujer"),
-        mpatches.Patch(color=COLOR_EVT, label="⚡ Suceso"),
+        mlines.Line2D([0, 1], [0, 0], color="#888", linewidth=2,
+                      linestyle=(0, (6, 3)), label="Línea de vida"),
+        mpatches.Patch(color=COLOR_H,  linewidth=0, label="♂  Hombre"),
+        mpatches.Patch(color=COLOR_M,  linewidth=0, label="♀  Mujer"),
+        mlines.Line2D([0], [0], color=COLOR_EVT, linewidth=2,
+                      marker="o", markersize=7,
+                      markeredgecolor=COLOR_EVT, markeredgewidth=0,
+                      label="Suceso"),
     ]
-    # Añadir una entrada por cada familia
     for f in familias:
         col_f = color_familia(f["nombre"], familias)
         legend_handles.append(
-            mpatches.Patch(color=col_f, alpha=0.5, label=f"🏠 {f['nombre']}")
+            mpatches.Patch(color=col_f, linewidth=0, alpha=0.8, label=f"{f['nombre']}")
         )
-    ax.legend(handles=legend_handles,
-              loc="lower right", fontsize=8, framealpha=0.9,
-              ncol=2 if len(legend_handles) > 5 else 1)
 
-ax.set_title(titulo, pad=12, fontsize=13, fontweight="bold", color="#1e2030")
-ax.set_xlabel("Año", labelpad=5, fontsize=9, color="#555")
-fig.tight_layout(rect=[0, 0.02, 1, 0.98])
+    ax.legend(handles=legend_handles,
+              loc="upper center",
+              bbox_to_anchor=(0.5, -0.10),
+              ncol=len(legend_handles),
+              fontsize=9,
+              frameon=True,
+              framealpha=0.9,
+              edgecolor="#ccc")
+
+
 
 st.pyplot(fig, use_container_width=True)
 
 # ── Exportar gráfica como imagen ─────────────────────────
-import io
 buf = io.BytesIO()
 fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
 buf.seek(0)
@@ -701,6 +808,74 @@ st.download_button(
     mime="image/png",
 )
 plt.close(fig)
+
+# ════════════════════════════════════════════════════════════
+#   PANEL DE INFORMACIÓN DEL PERSONAJE
+# ════════════════════════════════════════════════════════════
+st.markdown("---")
+st.markdown("### 🔎 Ficha del personaje")
+
+nombres_visibles = [p["nombre"] for p in visibles]
+if nombres_visibles:
+    # Marcar con 📝 los que tienen notas
+    opciones = [
+        f"📝 {p['nombre']}" if p.get("notas", "").strip() else p["nombre"]
+        for p in visibles
+    ]
+    sel_idx = st.selectbox(
+        "Selecciona un personaje para ver su ficha:",
+        options=range(len(opciones)),
+        format_func=lambda i: opciones[i],
+        key="sel_ficha"
+    )
+    p_sel = visibles[sel_idx]
+    sym   = "♂" if p_sel["genero"] == "H" else "♀"
+    color_css = "#2E86AB" if p_sel["genero"] == "H" else "#9B59B6"
+
+    nac_r   = p_sel["nac"]
+    muer_r  = p_sel["muer"]
+    nac_ap  = p_sel.get("nac_aprox",  False)
+    muer_ap = p_sel.get("muer_aprox", False)
+    nac_str  = (str(nac_r)+"?")  if (nac_ap  and nac_r)  else (str(nac_r)  if nac_r  else "?")
+    muer_str = (str(muer_r)+"?") if (muer_ap and muer_r) else (str(muer_r) if muer_r else "?")
+
+    p_fams    = [f["nombre"] for f in familias if p_sel["nombre"] in f["miembros"]]
+    p_sucesos = [s["nombre"] for s in sucesos  if p_sel["nombre"] in s["personajes"]]
+    notas     = p_sel.get("notas", "").strip()
+
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.markdown(
+            f"<div style='background:#f8f9fb; border-left:4px solid {color_css};"
+            f"padding:14px 18px; border-radius:8px;'>"
+            f"<span style='font-size:28px'>{sym}</span>"
+            f"<h3 style='color:{color_css}; margin:4px 0 8px'>{p_sel['nombre']}</h3>"
+            f"<p style='margin:2px 0; color:#555'>📅 <b>Nacimiento:</b> {nac_str}</p>"
+            f"<p style='margin:2px 0; color:#555'>✝️ <b>Muerte:</b> {muer_str}</p>"
+            f"<p style='margin:6px 0 2px; color:#555'>🏠 <b>Familias:</b> "
+            f"{', '.join(p_fams) if p_fams else '<i>ninguna</i>'}</p>"
+            f"<p style='margin:2px 0; color:#555'>⚡ <b>Sucesos:</b> "
+            f"{', '.join(p_sucesos) if p_sucesos else '<i>ninguno</i>'}</p>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+    with col2:
+        st.markdown("**📝 Notas:**")
+        if notas:
+            st.markdown(
+                f"<div style='background:#fffef5; border:1px solid #f0e68c;"
+                f"padding:12px 16px; border-radius:8px; color:#444; "
+                f"white-space:pre-wrap; font-size:14px'>{notas}</div>",
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                "<span style='color:#aaa; font-style:italic'>"
+                "Sin notas. Edita el personaje para añadirlas.</span>",
+                unsafe_allow_html=True
+            )
+else:
+    st.info("No hay personajes visibles en el rango seleccionado.")
 
 # Pie de página
 st.markdown(
