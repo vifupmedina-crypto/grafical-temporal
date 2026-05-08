@@ -1,4 +1,4 @@
-
+"""
 Gráfica Temporal Biográfica — versión Streamlit
 Ejecutar con:  streamlit run app.py
 """
