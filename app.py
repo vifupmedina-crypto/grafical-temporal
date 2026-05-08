@@ -1,4 +1,4 @@
-"""
+
 Gráfica Temporal Biográfica — versión Streamlit
 Ejecutar con:  streamlit run app.py
 """
@@ -145,6 +145,17 @@ with st.sidebar:
             st.session_state["filtro_rapido"] = "hombres"
         if c4.button("♀ M",       use_container_width=True):
             st.session_state["filtro_rapido"] = "mujeres"
+        
+        #limpiar que parece que no va:
+        if st.button("🧹 Limpiar filtros", use_container_width=True):
+            st.session_state["filtro_rapido"] = "todos"
+            st.session_state["filtro_familias"] = []
+            st.session_state["filtro_sucesos"] = []
+         # Reactivar todos los personajes
+            for p in personas:
+                st.session_state[f"p_{p['nombre']}"] = True
+
+            st.rerun()
 
      # Filtro por familia
         nombres_familias = [f["nombre"] for f in familias]
@@ -161,9 +172,21 @@ with st.sidebar:
         )
         if st.button("Aplicar filtro familiar", use_container_width=True):
             st.session_state["filtro_rapido"] = "familia"
+        
+        # añadiendo filtro sucesos
+
+        st.markdown("#### ⚡ Filtrar por sucesos")
+        sucesos_sel = st.multiselect(
+            "Mostrar personajes implicados en...",
+            options=[s["nombre"] for s in sucesos],
+            key="filtro_sucesos"
+        )
+        if st.button("Aplicar filtro de sucesos", use_container_width=True):
+            st.session_state["filtro_rapido"] = "sucesos"
+        # fin de añadiendo sucesos
 
         # Aplicar filtro rápido a los checkboxes
-        filtro = st.session_state.pop("filtro_rapido", None)
+        filtro = st.session_state.get("filtro_rapido", None)
 
         def persona_familias(nombre):
             return [f["nombre"] for f in familias if nombre in f["miembros"]]
@@ -193,6 +216,14 @@ with st.sidebar:
                     st.session_state[key] = (
                         not tiene_familia and mostrar_sin_familia
                     )
+            elif filtro == "sucesos":
+                personajes_relacionados = set()
+
+                for s in sucesos:
+                    if s["nombre"] in sucesos_sel:
+                        personajes_relacionados.update(s["personajes"])
+
+                st.session_state[key] = p["nombre"] in personajes_relacionados
 
     # ── Personajes: checkboxes + botones editar/borrar ────
     with st.expander("👤 Personajes", expanded=False):
@@ -770,6 +801,16 @@ else:
 
     # ── Sucesos ───────────────────────────────────────────
     for s in sucesos:
+
+
+#para no dibujar los sucesos no seleccionados
+        if (
+            st.session_state.get("filtro_rapido") == "sucesos"
+            and s["nombre"] not in st.session_state.get("filtro_sucesos", [])
+        ):
+            continue
+#hasta aquí
+
         n = s["nombre"]
         if not sel_s.get(n, True):
             continue
@@ -930,3 +971,4 @@ st.markdown(
     "</div>",
     unsafe_allow_html=True
 )
+
