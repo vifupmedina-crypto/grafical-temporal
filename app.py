@@ -185,6 +185,12 @@ with st.sidebar:
 
         for p in personas:
             key = f"p_{p['nombre']}"
+
+            # SI EL PERSONAJE ES NUEVO Y NO TIENE ESTADO, LO FORZAMOS A TRUE (VISIBLE)
+            if key not in st.session_state:
+                st.session_state[key] = True
+
+
             if key not in st.session_state:
                 st.session_state[key] = True
             if filtro == "todos":
@@ -409,65 +415,136 @@ with st.sidebar:
 
     st.markdown("---")
    
-    # AÑADIR DATOS
+# ── AÑADIR DATOS (CORREGIDO CON CALLBACKS) ────────────────────────
     with st.expander("➕ Añadir datos", expanded=False):
+        
+        # ── FUNCIONES DE LIMPIEZA (CALLBACKS) ──
+        def guardar_y_limpiar_personaje():
+            # Recuperamos los datos del estado actual
+            nom = st.session_state.get("np_nombre", "").strip()
+            if nom:
+                st.session_state.personas.append(dict(
+                    nombre=nom,
+                    nac=int(st.session_state.get("np_nac", 1600)),
+                    muer=int(st.session_state.get("np_muer", 1680)),
+                    nac_aprox=st.session_state.get("np_nac_ap", False),
+                    muer_aprox=st.session_state.get("np_muer_ap", False),
+                    genero="H" if "Hombre" in st.session_state.get("np_gen", "♂ Hombre") else "M",
+                    rol=st.session_state.get("np_rol", "Secundario"),
+                    notas=st.session_state.get("np_notas", "").strip()
+                ))
+                # Vincular a familias
+                np_familias = st.session_state.get("np_familias", [])
+                for f in st.session_state.familias:
+                    if f["nombre"] in np_familias:
+                        f["miembros"].append(nom)
+                
+                # Ahora que estamos en el callback, SÍ podemos resetear los campos legalmente
+                st.session_state["np_nombre"] = ""
+                st.session_state["np_nac"] = 1600
+                st.session_state["np_muer"] = 1680
+                st.session_state["np_gen"] = "♂ Hombre"
+                st.session_state["np_rol"] = "Secundario"
+                st.session_state["np_nac_ap"] = False
+                st.session_state["np_muer_ap"] = False
+                st.session_state["np_familias"] = []
+                st.session_state["np_notas"] = ""
+                st.session_state["p_guardado_ok"] = f"✅ '{nom}' añadido con éxito"
+            else:
+                st.session_state["p_guardado_err"] = "❌ El nombre es obligatorio"
+
+        def guardar_y_limpiar_suceso():
+            nom = st.session_state.get("ns_nombre", "").strip()
+            if nom:
+                st.session_state.sucesos.append(dict(
+                    nombre=nom,
+                    año=int(st.session_state.get("ns_año", 1650)),
+                    personajes=st.session_state.get("ns_pers", []),
+                    notas=st.session_state.get("ns_notas", "").strip()
+                ))
+                # Resetear campos de suceso
+                st.session_state["ns_nombre"] = ""
+                st.session_state["ns_año"] = 1650
+                st.session_state["ns_pers"] = []
+                st.session_state["ns_notas"] = ""
+                st.session_state["s_guardado_ok"] = f"✅ Suceso '{nom}' añadido"
+            else:
+                st.session_state["s_guardado_err"] = "❌ El nombre es obligatorio"
+
+        def guardar_y_limpiar_familia():
+            nom = st.session_state.get("nf_nombre", "").strip()
+            if nom:
+                nombres_fam = [f["nombre"] for f in st.session_state.familias]
+                if nom in nombres_fam:
+                    st.session_state["f_guardado_err"] = "❌ Ya existe una familia con ese nombre"
+                else:
+                    st.session_state.familias.append(dict(
+                        nombre=nom,
+                        miembros=list(st.session_state.get("nf_miembros", [])),
+                        notas=st.session_state.get("nf_notas", "").strip()
+                    ))
+                    # Resetear campos de familia
+                    st.session_state["nf_nombre"] = ""
+                    st.session_state["nf_miembros"] = []
+                    st.session_state["nf_notas"] = ""
+                    st.session_state["f_guardado_ok"] = f"✅ Familia '{nom}' añadida"
+            else:
+                st.session_state["f_guardado_err"] = "❌ El nombre es obligatorio"
+
+
+        # ── FORMULARIO: AÑADIR PERSONAJE ──────────────────────────────
         with st.expander("➕ Añadir personaje"):
-            np_nombre = st.text_input("Nombre", key="np_nombre")
+            st.text_input("Nombre", key="np_nombre")
             c1, c2 = st.columns(2)
-            np_nac  = c1.number_input("Año nacimiento", value=1600, step=1, key="np_nac")
-            np_muer = c2.number_input("Año muerte",     value=1680, step=1, key="np_muer")
-            np_gen  = st.radio("Género", ["♂ Hombre", "♀ Mujer"], horizontal=True, key="np_gen")
-            
-            # NUEVO: Selector de Rol al añadir personaje nuevo
-            np_rol  = st.radio("Importancia", ["Principal", "Secundario"], index=1, horizontal=True, key="np_rol")
+            c1.number_input("Año nacimiento", value=1600, step=1, key="np_nac")
+            c2.number_input("Año muerte",     value=1680, step=1, key="np_muer")
+            st.radio("Género", ["♂ Hombre", "♀ Mujer"], horizontal=True, key="np_gen")
+            st.radio("Importancia", ["Principal", "Secundario"], index=1, horizontal=True, key="np_rol")
             
             c3, c4  = st.columns(2)
-            np_nac_ap  = c3.checkbox("Nac. aprox. (?)", key="np_nac_ap")
-            np_muer_ap = c4.checkbox("Muer. aprox. (?)", key="np_muer_ap")
-            np_familias = st.multiselect("Familias (opcional)", options=[f["nombre"] for f in st.session_state.familias], key="np_familias")
-            np_notas = st.text_area("📝 Notas (opcional)", key="np_notas", height=80, placeholder="Observaciones...")
-            if st.button("Añadir personaje", type="primary"):
-                if np_nombre.strip():
-                    personas.append(dict(
-                        nombre=np_nombre.strip(),
-                        nac=int(np_nac), muer=int(np_muer),
-                        nac_aprox=np_nac_ap, muer_aprox=np_muer_ap,
-                        genero="H" if "Hombre" in np_gen else "M",
-                        rol=np_rol,                     # Guardamos el rol elegido
-                        notas=np_notas.strip()
-                    ))
-                    for f in st.session_state.familias:
-                        if f["nombre"] in np_familias: f["miembros"].append(np_nombre.strip())
-                    st.success(f"✅ '{np_nombre}' añadido")
-                    st.rerun()
-                else:
-                    st.error("El nombre es obligatorio")
+            c3.checkbox("Nac. aprox. (?)", key="np_nac_ap")
+            c4.checkbox("Muer. aprox. (?)", key="np_muer_ap")
+            st.multiselect("Familias (opcional)", options=[f["nombre"] for f in st.session_state.familias], key="np_familias")
+            st.text_area("📝 Notas (opcional)", key="np_notas", height=80, placeholder="Observaciones...")
+            
+            # Vinculamos el botón al callback
+            st.button("Añadir personaje", type="primary", on_click=guardar_y_limpiar_personaje)
+            
+            # Mostrar mensajes de estado diferidos
+            if "p_guardado_ok" in st.session_state:
+                st.success(st.session_state.pop("p_guardado_ok"))
+                st.rerun()
+            if "p_guardado_err" in st.session_state:
+                st.error(st.session_state.pop("p_guardado_err"))
 
+        # ── FORMULARIO: AÑADIR SUCESO ─────────────────────────────────
         with st.expander("➕ Añadir suceso"):
-            ns_nombre = st.text_input("Nombre del suceso", key="ns_nombre")
-            ns_año    = st.number_input("Año", value=1650, step=1, key="ns_año")
-            ns_pers   = st.multiselect("Personajes afectados", options=[p["nombre"] for p in personas], key="ns_pers")
-            ns_notas  = st.text_area("📝 Descripción / Notas", key="ns_notas", height=100)
-            if st.button("Añadir suceso", type="primary"):
-                if ns_nombre.strip():
-                    sucesos.append(dict(nombre=ns_nombre.strip(), año=int(ns_año), personajes=ns_pers, notas=ns_notas.strip()))
-                    st.success(f"✅ Suceso '{ns_nombre}' añadido")
-                    st.rerun()
-                else: st.error("El nombre es obligatorio")
+            st.text_input("Nombre del suceso", key="ns_nombre")
+            st.number_input("Año", value=1650, step=1, key="ns_año")
+            st.multiselect("Personajes afectados", options=[p["nombre"] for p in personas], key="ns_pers")
+            st.text_area("📝 Descripción / Notas", key="ns_notas", height=100)
+            
+            st.button("Añadir suceso", type="primary", on_click=guardar_y_limpiar_suceso)
+            
+            if "s_guardado_ok" in st.session_state:
+                st.success(st.session_state.pop("s_guardado_ok"))
+                st.rerun()
+            if "s_guardado_err" in st.session_state:
+                st.error(st.session_state.pop("s_guardado_err"))
 
+        # ── FORMULARIO: AÑADIR FAMILIA ────────────────────────────────
         with st.expander("➕ Añadir familia"):
-            nf_nombre = st.text_input("Nombre de la familia", key="nf_nombre")
-            nf_miembros = st.multiselect("Miembros", options=[p["nombre"] for p in personas], key="nf_miembros")
-            nf_notas = st.text_area("📝 Descripción / Notas", key="nf_notas", height=100)
-            if st.button("Añadir familia", type="primary"):
-                if nf_nombre.strip():
-                    nombres_fam = [f["nombre"] for f in st.session_state.familias]
-                    if nf_nombre.strip() in nombres_fam: st.error("Ya existe una familia con ese nombre")
-                    else:
-                        st.session_state.familias.append(dict(nombre=nf_nombre.strip(), miembros=list(nf_miembros), notas=nf_notas.strip()))
-                        st.success(f"✅ Familia '{nf_nombre}' añadida")
-                        st.rerun()
-                else: st.error("El nombre es obligatorio")
+            st.text_input("Nombre de la familia", key="nf_nombre")
+            st.multiselect("Miembros", options=[p["nombre"] for p in personas], key="nf_miembros")
+            st.text_area("📝 Descripción / Notas", key="nf_notas", height=100)
+            
+            st.button("Añadir familia", type="primary", on_click=guardar_y_limpiar_familia)
+            
+            if "f_guardado_ok" in st.session_state:
+                st.success(st.session_state.pop("f_guardado_ok"))
+                st.rerun()
+            if "f_guardado_err" in st.session_state:
+                st.error(st.session_state.pop("f_guardado_err"))
 
     # ── Exportar / Importar ──────────────────────────────────────────
     with st.expander("💾 Exportar / Importar", expanded=False):
