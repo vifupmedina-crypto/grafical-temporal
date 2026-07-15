@@ -304,7 +304,7 @@ with st.sidebar:
                             p["rol"]        = ep_rol_new        # Se guarda el nuevo rol
                             p["nac_aprox"]  = ep_nac_ap
                             p["muer_aprox"] = ep_muer_ap
-                            p["notes"]      = ep_notas_new.strip()
+                            p["notas"]      = ep_notas_new.strip()
                             break
                     for f in st.session_state.familias:
                         if ep_nombre in f["miembros"]: f["miembros"].remove(ep_nombre)
